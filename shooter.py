@@ -79,6 +79,7 @@ all_sprites = pygame.sprite.Group()
 meteor_list = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 
+
 player = Player()
 all_sprites.add(player)
 
@@ -109,6 +110,8 @@ running = True
 paused = False  # Variable para controlar la pausa
 collision_count = 0  # Contador de colisiones
 max_collisions = 3  # Máximo de colisiones permitidas
+meteoritos_eliminados = 0
+
 
 while running:
     clock.tick(60)
@@ -136,7 +139,7 @@ while running:
         meteor = Meteor()
         all_sprites.add(meteor)
         meteor_list.add(meteor)
-
+        meteoritos_eliminados += len(hits)
 
     #validar colisiones - jugador - meteoro
 
@@ -176,6 +179,11 @@ while running:
                             waiting_for_restart = False
 
     screen.blit(background,[0,0])
+    # Mostrar el contador de meteoritos eliminados en la esquina superior derecha
+    font = pygame.font.Font(None, 36)
+    contador_text = font.render(f"Meteoritos eliminados: {meteoritos_eliminados}", True, WHITE)
+    contador_text_rect = contador_text.get_rect(topright=(WIDTH - 10, 10))
+    screen.blit(contador_text, contador_text_rect)
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
