@@ -33,27 +33,149 @@ class Player(pygame.sprite.Sprite):
             self.rect.right = WIDTH
         if self.rect.left < 0:
             self.rect.left = 0
+    def shoot(self):
+        bullet = Bullet(self.rect.centerx, self.rect.top)
+        all_sprites.add(bullet)
+        bullets.add(bullet)
+
+class Meteor(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load("assets/meteorGrey_med1.png").convert()
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randrange(WIDTH - self.rect.width)
+        self.rect.y = random.randrange(-100, -40)
+        self.speedy = random.randrange(1,10)
+        self.speedx = random.randrange(-5,5)
+
+    def update(self):
+        self.rect.y += self.speedy
+        self.rect.x += self.speedx
+        if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 25:
+            self.rect.x = random.randrange(WIDTH - self.rect.width)
+            self.rect.y = random.randrange(-100, -40)
+            self.speedy = random.randrange(1, 10)
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.image.load("assets/laser1.png")
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.y = y
+        self.rect.centerx = x
+        self.speedy = -10
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.bottom < 0:
+            self.kill()
 
 
-
-
-
+#BackGround de fondo
+background = pygame.image.load("assets/background.png").convert()
 all_sprites = pygame.sprite.Group()
+meteor_list = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
 
 player = Player()
 all_sprites.add(player)
 
+for i in range(8):
+    meteor = Meteor()
+    all_sprites.add(meteor)
+    meteor_list.add(meteor)
+
+# Pantalla de inicio
+font = pygame.font.Font(None, 36)
+start_text = font.render("Presiona ESPACIO para comenzar", True, WHITE)
+start_text_rect = start_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+screen.blit(start_text, start_text_rect)
+pygame.display.flip()
+
+waiting_for_start = True
+while waiting_for_start:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            waiting_for_start = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                waiting_for_start = False
+
+
 running = True
+paused = False  # Variable para controlar la pausa
+collision_count = 0  # Contador de colisiones
+max_collisions = 3  # Máximo de colisiones permitidas
+
 while running:
     clock.tick(60)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                player.shoot()
+            elif event.key == pygame.K_p:  # Pausar y reanudar con la tecla "p"
+                paused = not paused
+            elif event.key == pygame.K_q:  # Salir del juego en pausa con la tecla "q"
+                if paused:
+                    pygame.quit()
+                    running = False
 
 
+    if not paused:  # Solo actualiza el juego si no está en pausa
+        all_sprites.update()
 
-    all_sprites.update()
-    screen.fill(BLACK)
+
+    #validar colisiones - laser - meteoro
+    hits = pygame.sprite.groupcollide(meteor_list, bullets, True, True)
+    for hit in hits:
+        meteor = Meteor()
+        all_sprites.add(meteor)
+        meteor_list.add(meteor)
+
+
+    #validar colisiones - jugador - meteoro
+
+    hits = pygame.sprite.spritecollide(player, meteor_list, True)
+    if hits:
+        collision_count += 1
+        if collision_count >= max_collisions:
+            # Pantalla de Game Over
+            font = pygame.font.Font(None, 25)
+            game_over_text = font.render("¡Game Over! Presiona ESPACIO para continuar.", True, WHITE)
+            game_over_text_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(game_over_text, game_over_text_rect)
+            pygame.display.flip()
+
+            # Restablecer contador de colisiones
+            collision_count = 0
+
+            # Limpiar todos los meteoritos actuales
+            for meteor in meteor_list:
+                meteor.kill()
+
+            # Generar nuevos meteoritos
+            for i in range(8):
+                meteor = Meteor()
+                all_sprites.add(meteor)
+                meteor_list.add(meteor)
+
+            waiting_for_restart = True
+            while waiting_for_restart:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        waiting_for_restart = False
+                        running = False
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            waiting_for_restart = False
+
+    screen.blit(background,[0,0])
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
